@@ -1,0 +1,4 @@
+[
+  {"name":"mpc_n10.mat","n":10,"m":50,"n_plus_m":60,"ns":3,"nu":2,"offline_s":3.9583,"n_regions":302,"mem_total_kb":448.3,"online_median_ms":0.567000,"closedloop_ms":0.571850,"rmse":0.226787,"cost":34.7240,"status":"success"},
+  {"name":"mpc_n20.mat","n":20,"m":120,"n_plus_m":140,"ns":4,"nu":2,"offline_s":185.9147,"n_regions":3123,"mem_total_kb":14151.1,"online_median_ms":4.111000,"closedloop_ms":4.116185,"rmse":0.211622,"cost":42.2417,"status":"success"}
+]
