@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tqpnet"
+version = "0.1.0"
+description = "TQPNet: learned warm starts with low-dimensional ADMM-ReLU refinement for parametric QPs"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Liang Wu" },
+    { name = "Bo Yang" },
+    { name = "Xu Yang" },
+    { name = "Honghui Zheng" },
+]
+maintainers = [
+    { name = "Honghui Zheng", email = "hzheng39@jh.edu" },
+]
+keywords = ["optimization", "quadratic programming", "learning-to-optimize", "neural proxy", "ADMM"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=1.25",
+    "jax>=0.4.30",
+    "optax>=0.2",
+    "flax>=0.8",
+]
+
+[project.urls]
+Repository = "https://github.com/SOLARIS-JHU/TQPNet"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "cvxpy",
+]
+experiments = [
+    "torch",
+    "matplotlib",
+    "scipy",
+    "osqp",
+    "cvxpy",
+]
+quadruped = [
+    "torch",
+    "matplotlib",
+    "scipy",
+    "osqp",
+    "cvxpy",
+    "qpth",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
