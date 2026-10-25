@@ -36,7 +36,7 @@ METRIC_LABELS = {
     "rel": r"$\|x^{k} - x^{\star}\|_{2} / \|x^{\star}\|_{2}$",
 }
 
-SCALE_TAG = "n100"   # match admm_convergence.py SCALE_TAG; "n10"/"n100"/"n500" supported
+SCALE_TAG = "n500m1000"   # match admm_convergence.py SCALE_TAG; "n10"/"n100"/"n500"/"n500m1000" supported
 DATA_DIR  = (Path(__file__).resolve().parent
              / "runs" / "admm_convergence" / f"data_{SCALE_TAG}")
 OUT_DIR  = (Path(__file__).resolve().parent

@@ -28,7 +28,7 @@ Data output (`experiments/runs/admm_convergence/data/admm_convergence_a{2,4,6}.n
       A_scale, n, m, density, K, rho, seed
 
 Usage:
-    conda run -n isaacgym python -m experiments.admm.admm_convergence
+    python -m experiments.admm.admm_convergence
 """
 from __future__ import annotations
 
@@ -41,11 +41,11 @@ from scipy import sparse
 import torch
 
 
-SCALE_TAG = "n100"  # "n10" (small), "n100" (current paper Fig 2), "n500"
-_SCALES   = {"n10": (10, 20), "n100": (100, 200), "n500": (500, 500)}
+SCALE_TAG = "n500m1000"  # paper Fig 2: n=500, m=1000, density 0.1; "n10"/"n100"/"n500" match the ablation scales
+_SCALES   = {"n10": (10, 20), "n100": (100, 200), "n500": (500, 500), "n500m1000": (500, 1000)}
 # Per-scale (np_dim, density) matching the corresponding training_ablation setup.
-_NP_DIM   = {"n10": 4,  "n100": 20, "n500": 50}
-_DENSITY  = {"n10": 0.3, "n100": 0.2, "n500": 0.1}
+_NP_DIM   = {"n10": 4,  "n100": 20, "n500": 50, "n500m1000": 50}
+_DENSITY  = {"n10": 0.3, "n100": 0.2, "n500": 0.1, "n500m1000": 0.1}
 DATA_DIR  = (Path(__file__).resolve().parent
              / "runs" / "admm_convergence" / f"data_{SCALE_TAG}")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
