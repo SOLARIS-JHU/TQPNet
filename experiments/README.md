@@ -14,7 +14,7 @@ All commands run from the repository root and write outputs under a gitignored `
 
 | Paper artifact | Generate data | Plot |
 |---|---|---|
-| Fig 2 (ADMM convergence, a=2/4/6) | `python -m experiments.admm.admm_convergence` | `python -m experiments.admm.plot_admm_convergence` |
+| Fig 2 (ADMM convergence, scale=2/4/6; 100 QPs at n=500, m=1000, density 0.1, the default `SCALE_TAG = "n500m1000"`) | `python -m experiments.admm.admm_convergence` | `python -m experiments.admm.plot_admm_convergence` |
 | Fig 3a (training ablation, n=100) | `python -m experiments.ablation.training_ablation` (set `SCALE_TAG = "n100"` in the script for the main-text figure; the default `"n10"` produces the appendix figure) | `python -m experiments.ablation.plot_ablation` |
 | Fig 3b + Table + Appendix inference-time figure (inference ablation, n=100) | `python -m experiments.ablation.inference_ablation` (set `SCALE_TAG = "n100"` in the script, matching `training_ablation.py`) | `python -m experiments.ablation.plot_ablation` |
 | Appendix: ablation figures at n=10 (training, inference, inference time) | same two scripts with the default `SCALE_TAG = "n10"` | `python -m experiments.ablation.plot_ablation` (plots both scales it finds) |
