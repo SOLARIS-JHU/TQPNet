@@ -51,14 +51,6 @@ experiments = [
     "osqp",
     "cvxpy",
 ]
-quadruped = [
-    "torch",
-    "matplotlib",
-    "scipy",
-    "osqp",
-    "cvxpy",
-    "qpth",
-]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -71,7 +71,13 @@ pip install -e ".[dev]"           # core JAX package + tests
 pip install -e ".[experiments]"   # adds torch, matplotlib, scipy, osqp, cvxpy for experiments/
 ```
 
-The quadruped benchmarks need `pip install -e ".[quadruped]"` in a separate environment (it pulls in `qpth`, which pins an older `numpy` than recent JAX releases accept); see `experiments/pympc-quadruped/README.md`.
+The quadruped benchmarks (`experiments/pympc-quadruped/`) do not use the core package and need `qpth`, which pins `numpy<2` while current JAX releases need `numpy>=2`. Install them in a separate environment without this package:
+
+```bash
+pip install "numpy<2" "qpth==0.0.18" torch matplotlib scipy osqp cvxpy
+```
+
+See `experiments/pympc-quadruped/README.md` for the simulator dependencies of the closed-loop runs.
 
 ## Quick Start
 

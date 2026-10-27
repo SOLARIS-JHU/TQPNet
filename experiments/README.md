@@ -21,7 +21,7 @@ All commands run from the repository root and write outputs under a gitignored `
 | Fig 4 + Table (generalizability) | `python -m experiments.generalizability.generalizability` | (plots built in) |
 | Fig 5 + Table (scalability MPC, explicit-MPC baseline) | `python -m experiments.scalability.scalability_mpc` (also writes `scalability_mpc_table.tex`) | `python -m experiments.plot_paper` (latency and offline-time figures) |
 | Appendix: quadrotor UAV MPC (trajectory, tracking error, table) | `python -m experiments.uav.uav_tqpnet` then `python -m experiments.uav.uav_benchmark` | `python -m experiments.uav.plot_uav` |
-| Figs 6 and 7 (quadruped batch MPC) | see `pympc-quadruped/README.md` (needs the `[quadruped]` extra) | `pympc-quadruped/scripts/make_paper_plots.py` |
+| Figs 6 and 7 (quadruped batch MPC) | see `pympc-quadruped/README.md` (separate environment with `qpth`) | `pympc-quadruped/scripts/make_paper_plots.py` |
 | Explicit MPC baseline (MATLAB) | run `experiments/scalability/explicit_mpc/run_explicit_mpc.m` in MATLAB | (results JSON consumed by scalability table) |
 
 `python -m experiments.plot_results` runs the ADMM, ablation, UAV and scalability plotting entry points in one go, and `python -m experiments.plot_paper` renders the paper-styled scalability and UAV figures, assuming the data-generation runs above have completed.

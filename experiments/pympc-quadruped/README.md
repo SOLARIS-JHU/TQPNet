@@ -9,4 +9,10 @@ Quadruped linear-MPC stack for the batch-MPC experiments, adapted from the open-
 - `scripts/run_velocity_tracking.py` — closed-loop velocity tracking in simulation (requires Isaac Gym or MuJoCo; writes CSVs).
 - `scripts/make_paper_plots.py` — regenerates the four paper figures into `runs/paper_figures/`.
 
-The solver benchmarks and paper plots need the `[quadruped]` extra (`pip install -e ".[quadruped]"`), which adds `qpth`; install it in a separate environment, since `qpth` currently pins an older `numpy` than recent JAX releases accept. Simulation extras (Isaac Gym, MuJoCo) and `pinocchio` (used by `utils/robot_data.py`) are only needed for the closed-loop runs.
+This stack does not import the core `tqpnet` package. The solver benchmarks and paper plots need `qpth`, which pins `numpy<2` while current JAX releases need `numpy>=2`, so use a separate environment and install the dependencies directly:
+
+```bash
+pip install "numpy<2" "qpth==0.0.18" torch matplotlib scipy osqp cvxpy
+```
+
+Run the scripts from this directory (`python scripts/<name>.py`). Simulation extras (Isaac Gym, MuJoCo) and `pinocchio` (used by `utils/robot_data.py`) are only needed for the closed-loop runs.
