@@ -1,7 +1,7 @@
 <h1 align="center">TQPNet</h1>
 
 <p align="center">
-  <a href="https://neurips.cc/Conferences/2026"><img src="https://img.shields.io/badge/NeurIPS-2026-5C2D91.svg" alt="NeurIPS 2026"></a>
+  <a href="https://neurips.cc/virtual/2026/poster/149158"><img src="https://img.shields.io/badge/NeurIPS-2026-5C2D91.svg" alt="NeurIPS 2026 paper page"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://github.com/jax-ml/jax"><img src="https://img.shields.io/badge/JAX-core%20package-9C27B0.svg" alt="JAX"></a>
   <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-experiments-EE4C2C.svg?logo=pytorch&logoColor=white" alt="PyTorch"></a>
