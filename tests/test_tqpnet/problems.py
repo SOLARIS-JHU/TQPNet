@@ -1,9 +1,9 @@
 """Shared test problems: the paper's random mpQP generator and a cvxpy reference.
 
 ``random_qp`` mirrors ``experiments/base.py::build_config`` (same formulas, numpy
-instead of torch, with ``a_scale=3.0`` and ``c_offset=-1.0`` as the experiments set
-through ``experiments/config.py``) so the JAX package is tested on the family the
-paper uses.
+instead of torch, with ``a_scale=3.0`` from ``experiments/config.py`` and
+``build_config``'s default ``c_offset=-1.0``; ``training_ablation.py`` overrides the
+latter to +1.0) so the JAX package is tested on the family the paper uses.
 """
 import cvxpy as cp
 import jax.numpy as jnp
