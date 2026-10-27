@@ -11,9 +11,9 @@ license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
     { name = "Liang Wu" },
+    { name = "Honghui Zheng" },
     { name = "Bo Yang" },
     { name = "Xu Yang" },
-    { name = "Honghui Zheng" },
 ]
 maintainers = [
     { name = "Honghui Zheng", email = "hzheng39@jh.edu" },

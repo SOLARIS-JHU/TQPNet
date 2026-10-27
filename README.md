@@ -10,7 +10,9 @@
 
 <p align="center"><b>Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program</b></p>
 
-<p align="center">Liang Wu, Bo Yang, Xu Yang, Honghui Zheng, Yilin Mo, and Ján Drgoňa</p>
+<p align="center">Liang Wu<sup>*</sup>, Honghui Zheng<sup>*&dagger;</sup>, Bo Yang<sup>*</sup>, Xu Yang<sup>*</sup>, Yilin Mo, and Ján Drgoňa</p>
+
+<p align="center"><sub><sup>*</sup> Equal contribution &nbsp;·&nbsp; <sup>&dagger;</sup> Corresponding author</sub></p>
 
 <p align="center">Johns Hopkins University &nbsp;·&nbsp; Tsinghua University</p>
 
@@ -156,7 +158,7 @@ If you use this code in your research, please cite the paper:
 ```bibtex
 @inproceedings{wu2026neural,
   title     = {Neural Compression of Long {ADMM} Trajectory for Multiparametric Quadratic Program},
-  author    = {Wu, Liang and Yang, Bo and Yang, Xu and Zheng, Honghui and Mo, Yilin and Drgo{\v{n}}a, J{\'a}n},
+  author    = {Wu, Liang and Zheng, Honghui and Yang, Bo and Yang, Xu and Mo, Yilin and Drgo{\v{n}}a, J{\'a}n},
   booktitle = {Advances in Neural Information Processing Systems},
   year      = {2026}
 }
