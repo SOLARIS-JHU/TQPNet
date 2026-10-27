@@ -2,6 +2,7 @@
 
 <p align="center">
   <a href="https://neurips.cc/virtual/2026/poster/149158"><img src="https://img.shields.io/badge/NeurIPS-2026-5C2D91.svg" alt="NeurIPS 2026 paper page"></a>
+  <a href="https://solaris-jhu.github.io/TQPNet/"><img src="https://img.shields.io/badge/Project%20page-solaris--jhu.github.io-002D72.svg?logo=githubpages&logoColor=white" alt="Project page"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://github.com/jax-ml/jax"><img src="https://img.shields.io/badge/JAX-core%20package-9C27B0.svg" alt="JAX"></a>
   <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-experiments-EE4C2C.svg?logo=pytorch&logoColor=white" alt="PyTorch"></a>
@@ -17,6 +18,12 @@
 <p align="center">Johns Hopkins University &nbsp;·&nbsp; Tsinghua University</p>
 
 Companion code for the paper *Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program*, accepted at *NeurIPS 2026*.
+
+<p align="center">
+  <img src="docs/figures/isaacgym_4096.gif" width="95%" alt="4096 Unitree A1 quadrupeds trotting in Isaac Gym, each controlled by TQPNet-based MPC solved in one batched pass per control cycle">
+</p>
+
+<p align="center"><sub>4096 quadrupeds in Isaac Gym, one batched TQPNet solve per 50 Hz control cycle (see <a href="https://solaris-jhu.github.io/TQPNet/#quadruped">the project page</a> for the full clip).</sub></p>
 
 ---
 

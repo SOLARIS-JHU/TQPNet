@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TQPNet: Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program</title>
+  <meta name="description" content="TQPNet compresses thousands of ADMM iterations for a multiparametric quadratic program into an MLP(ReLU) warm start plus a few unrolled ADMM(ReLU) layers. Trained without solver labels on a KKT-residual loss that doubles as an online certificate; near-constant ~1.3 ms latency, 7× faster than OSQP at n+m = 2800, and 4096 quadrupeds controlled by one batched solve in Isaac Gym. NeurIPS 2026.">
+  <link rel="canonical" href="https://solaris-jhu.github.io/TQPNet/">
+  <link rel="icon" type="image/png" sizes="64x64" href="static/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="static/apple-touch-icon.png">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="TQPNet: Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program">
+  <meta property="og:description" content="Thousands of ADMM iterations compressed into one MLP(ReLU) warm start plus a few ADMM(ReLU) layers. Self-supervised, certified, batch-parallel. NeurIPS 2026.">
+  <meta property="og:url" content="https://solaris-jhu.github.io/TQPNet/">
+  <meta property="og:image" content="https://solaris-jhu.github.io/TQPNet/static/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TQPNet: Neural Compression of Long ADMM Trajectory for mpQPs">
+  <meta name="twitter:description" content="Near-constant 1.3 ms QP latency, 7× faster than OSQP at n+m = 2800, 4096 quadrupeds per batched solve. No solver labels. NeurIPS 2026.">
+  <meta name="twitter:image" content="https://solaris-jhu.github.io/TQPNet/static/og.png">
+
+  <meta name="citation_title" content="Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program">
+  <meta name="citation_author" content="Wu, Liang">
+  <meta name="citation_author" content="Zheng, Honghui">
+  <meta name="citation_author" content="Yang, Bo">
+  <meta name="citation_author" content="Yang, Xu">
+  <meta name="citation_author" content="Mo, Yilin">
+  <meta name="citation_author" content="Drgoňa, Ján">
+  <meta name="citation_publication_date" content="2026">
+  <meta name="citation_conference_title" content="Advances in Neural Information Processing Systems (NeurIPS 2026)">
+  <meta name="citation_abstract_html_url" content="https://neurips.cc/virtual/2026/poster/149158">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ScholarlyArticle",
+    "headline": "Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program",
+    "alternativeHeadline": "TQPNet",
+    "author": [
+      {"@type": "Person", "name": "Liang Wu", "affiliation": {"@type": "Organization", "name": "Johns Hopkins University"}},
+      {"@type": "Person", "name": "Honghui Zheng", "affiliation": {"@type": "Organization", "name": "Johns Hopkins University"}},
+      {"@type": "Person", "name": "Bo Yang", "affiliation": {"@type": "Organization", "name": "Tsinghua University"}},
+      {"@type": "Person", "name": "Xu Yang", "affiliation": {"@type": "Organization", "name": "Tsinghua University"}},
+      {"@type": "Person", "name": "Yilin Mo", "affiliation": {"@type": "Organization", "name": "Tsinghua University"}},
+      {"@type": "Person", "name": "Ján Drgoňa", "affiliation": {"@type": "Organization", "name": "Johns Hopkins University"}}
+    ],
+    "isPartOf": {"@type": "Periodical", "name": "Advances in Neural Information Processing Systems"},
+    "datePublished": "2026",
+    "sameAs": ["https://neurips.cc/virtual/2026/poster/149158"],
+    "url": "https://solaris-jhu.github.io/TQPNet/",
+    "image": "https://solaris-jhu.github.io/TQPNet/static/og.png"
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" integrity="sha384-cMkvdD8LoxVzGF/RPUKAcvmm49FQ0oxwDF3BGKtDXcEc+T1b2N+teh/OJfpU0jr6" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}], throwOnError: false});"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <main id="main">
+    <section class="hero">
+      <div class="wrap">
+        <header class="hero-head">
+          <p class="eyebrow"><span class="pill">NeurIPS 2026</span>Conference on Neural Information Processing Systems · Sydney</p>
+          <h1>Neural Compression of Long ADMM Trajectory for Multiparametric Quadratic Program</h1>
+          <p class="authors">
+            <span class="author">Liang Wu<sup>1,*</sup>
+              <a class="alink" href="https://systems.jhu.edu/team-member/liang-wu/" aria-label="Liang Wu at Johns Hopkins University"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></a>
+              <a class="alink" href="mailto:wliang14@jh.edu" aria-label="Email Liang Wu"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+            <span class="author">Honghui Zheng<sup>1,*,&dagger;</sup>
+              <a class="alink" href="https://www.linkedin.com/in/honghui-zheng-4904863a3/" aria-label="Honghui Zheng on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+              <a class="alink" href="mailto:hzheng39@jh.edu" aria-label="Email Honghui Zheng"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+            <span class="author">Bo Yang<sup>2,*</sup>
+              <a class="alink" href="https://github.com/YangBo17" aria-label="Bo Yang on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+              <a class="alink" href="mailto:yang-b21@mails.tsinghua.edu.cn" aria-label="Email Bo Yang"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+            <span class="author">Xu Yang<sup>2,*</sup>
+              <a class="alink" href="https://github.com/xu-yang16" aria-label="Xu Yang on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+              <a class="alink" href="mailto:yangx21@mails.tsinghua.edu.cn" aria-label="Email Xu Yang"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+            <span class="author">Yilin Mo<sup>2</sup>
+              <a class="alink" href="https://yilinmo.github.io/" aria-label="Yilin Mo's homepage"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></a>
+              <a class="alink" href="mailto:ylmo@tsinghua.edu.cn" aria-label="Email Yilin Mo"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+            <span class="author">Ján Drgoňa<sup>1</sup>
+              <a class="alink" href="https://www.linkedin.com/in/drgona/" aria-label="Ján Drgoňa on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+              <a class="alink" href="mailto:jdrgona1@jh.edu" aria-label="Email Ján Drgoňa"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 6 12 13 2 6"/></svg></a>
+            </span>
+          </p>
+          <p class="affiliations">
+            <sup>1</sup><a href="https://engineering.jhu.edu/case/">Department of Civil and Systems Engineering</a>, <a href="https://www.jhu.edu/">Johns Hopkins University</a><br>
+            <sup>2</sup><a href="https://www.au.tsinghua.edu.cn/en/">Department of Automation</a>, <a href="https://www.tsinghua.edu.cn/en/">Tsinghua University</a>
+          </p>
+          <p class="author-note"><sup>*</sup> Equal contribution &nbsp;·&nbsp; <sup>&dagger;</sup> Corresponding author</p>
+        </header>
+        <div class="hero-grid">
+          <div class="hero-text">
+            <p class="summary">Solving a multiparametric quadratic program in real time can take thousands of ADMM iterations, and none of that work carries over to the next instance. TQPNet learns to compress the whole trajectory into a small ReLU network that emits a primal-dual warm start, followed by a handful of unrolled ADMM(ReLU) layers. The network is trained on the KKT residual alone, with no solver labels, and that same residual certifies every answer online and triggers extra refinement only where it is needed.</p>
+            <p class="buttons">
+              <a class="btn btn-primary" href="https://neurips.cc/virtual/2026/poster/149158">Paper</a>
+              <a class="btn" href="https://github.com/SOLARIS-JHU/TQPNet">Code</a>
+              <a class="btn" href="#citation">BibTeX</a>
+            </p>
+          </div>
+          <figure class="hero-art">
+            <video autoplay muted loop playsinline preload="metadata" poster="static/video/isaacgym_4096_poster.jpg" aria-label="Isaac Gym simulation of 4096 Unitree A1 quadrupeds trotting, each controlled by TQPNet-based model predictive control solved in one batched pass per control cycle">
+              <source src="static/video/isaacgym_4096.mp4" type="video/mp4">
+              <source src="static/video/isaacgym_4096.webm" type="video/webm">
+            </video>
+            <figcaption>4096 quadrupeds in Isaac Gym, one batched TQPNet solve per cycle.</figcaption>
+          </figure>
+        </div>
+        <div class="logos" aria-label="Institutions">
+          <a href="https://engineering.jhu.edu/case/"><img src="static/logos/jhu-whiting.svg" alt="Johns Hopkins Whiting School of Engineering" width="240" height="64"></a>
+          <a href="https://solaris-jhu.github.io/solaris-website/"><img class="square" src="static/logos/solaris.png" alt="SOLARIS lab, Johns Hopkins University" width="240" height="199"></a>
+          <a href="https://www.tsinghua.edu.cn/en/"><img class="square" src="static/logos/tsinghua.png" alt="Tsinghua University" width="240" height="240"></a>
+          <a href="https://energyinstitute.jhu.edu/"><img src="static/logos/rosei.png" alt="Johns Hopkins Ralph O'Connor Sustainable Energy Institute" width="956" height="238"></a>
+        </div>
+      </div>
+    </section>
+    <section class="stats" aria-label="Headline results">
+      <div class="wrap stats-grid">
+        <div class="card stat">
+          <p class="stat-value">7×</p>
+          <p class="stat-label">faster than OSQP at n+m = 2800</p>
+          <p class="stat-note">On MPC-structured QPs TQPNet with K = 10 layers holds about 1.3 ms across nine scales while OSQP grows from 0.03 ms to 13 ms. Crossover at n+m = 875, same closed-loop tracking error.</p>
+        </div>
+        <div class="card stat">
+          <p class="stat-value">4096</p>
+          <p class="stat-label">robots per batched solve</p>
+          <p class="stat-note">Quadruped MPC at 50 Hz in Isaac Gym, 192 variables and 384 constraints per robot, all solved concurrently in one control cycle. Trained in under five minutes on one RTX 3080.</p>
+        </div>
+        <div class="card stat">
+          <p class="stat-value">0</p>
+          <p class="stat-label">solver labels</p>
+          <p class="stat-note">The loss is the KKT residual of the QP itself, so training only needs sampled parameters. Offline cost drops below the supervised pipeline for n+m &ge; 2100.</p>
+        </div>
+        <div class="card stat">
+          <p class="stat-value">1.8×</p>
+          <p class="stat-label">fewer iterations to 10<sup>-7</sup></p>
+          <p class="stat-note">On n = 100, m = 200 random mpQPs the learned warm start cuts the 4729 cold-start ADMM(ReLU) iterations to 2778, and every answer ships with its residual certificate.</p>
+        </div>
+      </div>
+    </section>
+    <section id="problem" class="alt">
+      <div class="wrap wrap-narrow">
+        <h2>The problem</h2>
+        <div class="prose">
+          <p>Model predictive control, differentiable control layers and reinforcement-learning pipelines all solve the same convex quadratic program over and over. The Hessian and the constraint matrix stay fixed; only the linear terms move with a parameter \(p\) such as the current state, the reference and the contact schedule:</p>
+        </div>
+        <div class="math">
+$$
+\begin{aligned}
+\min_{x \in \mathbb{R}^{n}} \quad & \tfrac{1}{2}\, x^{\top} Q\, x + q(p)^{\top} x \\
+\text{s.t.} \quad & A\, x \geq c(p), \qquad p \in \mathcal{P} \subset \mathbb{R}^{n_p}.
+\end{aligned}
+$$
+        </div>
+        <div class="prose">
+          <p>Each instance is cheap on paper, yet a first-order method started from scratch needs thousands of iterations to reach a tight optimality tolerance. On a modest instance with 100 variables and 200 constraints, low-dimensional ADMM(ReLU) needs 4729 cold-start iterations to reach a KKT residual of \(10^{-7}\), and nothing it learned about one parameter transfers to the next. The existing shortcuts each give something up.</p>
+        </div>
+        <div class="gaps">
+          <div class="card">
+            <h3>Online solvers</h3>
+            <p>Interior-point, active-set and first-order solvers certify their answer, but they do no offline work, so every instance pays the full iteration count, and their sequential structure does not batch on a GPU.</p>
+          </div>
+          <div class="card">
+            <h3>Explicit MPC</h3>
+            <p>Precomputing the piecewise-affine solution map gives instant lookups, but the number of regions explodes: 3123 regions and 4.1 ms already at n+m = 140, and infeasible beyond n+m = 315.</p>
+          </div>
+          <div class="card">
+            <h3>Supervised proxies</h3>
+            <p>A network regressed on solver labels is fast, but it needs a solver call for every training point, carries no certificate, and degrades silently under distribution shift.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="method">
+      <div class="wrap wrap-narrow">
+        <h2>TQPNet</h2>
+        <div class="prose">
+          <p>TQPNet keeps the optimizer in the loop and makes it learnable. A ReLU multilayer perceptron maps the parameter to a primal-dual pair \((x_0, \beta_0)\), and a fixed number \(K\) of unrolled ADMM(ReLU) layers refine it. Offline, the whole stack is trained end-to-end on the residual of the QP's optimality conditions over sampled parameters. Online, the same residual is checked per instance; whenever it exceeds the tolerance, more ADMM(ReLU) layers run on that instance until it passes.</p>
+        </div>
+        <figure class="figure figure-card">
+          <img src="static/figures/tqpnet_architecture.png" alt="TQPNet architecture. Offline training phase: sampled parameters feed an MLP(ReLU) that outputs (x, beta), K layers of low-dimensional ADMM(ReLU) refine them, and the KKT residual loss J is minimized until it falls below epsilon_off. Online inference phase: batched parameters pass through the same MLP(ReLU) and K ADMM(ReLU) layers, the residual is checked against epsilon_on, and further ADMM(ReLU) iterations run only if the check fails before x is returned" width="1800" height="693">
+          <figcaption>The hybrid MLP(ReLU)-ADMM(ReLU) architecture. Offline (top), the residual is the training loss. Online (bottom), the residual is a certificate that triggers extra refinement only when needed.</figcaption>
+        </figure>
+        <div class="pillars">
+          <div class="card">
+            <span class="num">1</span>
+            <h3>Low-dimensional ADMM</h3>
+            <p>A new splitting iterates directly on the primal-dual pair \((x, \beta)\) instead of the usual \((x, z, u)\) with the auxiliary variable \(z = Ax\). Each iteration costs \(O((n+m)^2)\) rather than \(O((n+2m)^2)\), and it converges faster in practice.</p>
+          </div>
+          <div class="card">
+            <span class="num">2</span>
+            <h3>ADMM(ReLU)</h3>
+            <p>One iteration of that scheme is exactly an affine map followed by a ReLU on the multiplier. It is therefore a neural-network layer: differentiable, batch-parallel on a GPU, and stackable behind an MLP.</p>
+          </div>
+          <div class="card">
+            <span class="num">3</span>
+            <h3>Residual as loss and certificate</h3>
+            <p>The KKT residual bounds the distance to the solution set, so minimizing it trains the network without labels, and thresholding it online certifies each returned solution.</p>
+          </div>
+        </div>
+        <h3>One ADMM iteration is one ReLU layer</h3>
+        <div class="prose">
+          <p>Eliminating \(z\) from the standard ADMM for the QP leaves an update that touches only \(x\) and the multiplier \(\beta\), and the projection onto the nonnegative orthant is a ReLU:</p>
+        </div>
+        <div class="math">
+$$
+\begin{bmatrix} x^{k+1} \\ \beta^{k+1} \end{bmatrix}
+= \mathrm{ReLU}_{\beta \geq 0}\!\left( W_2 \begin{bmatrix} x^{k} \\ \beta^{k} \end{bmatrix} + b_2 \right),
+\qquad
+\mathrm{ReLU}_{\beta \geq 0}\!\left(\begin{bmatrix} x \\ \beta \end{bmatrix}\right) = \begin{bmatrix} x \\ \max(0, \beta) \end{bmatrix},
+$$
+        </div>
+        <div class="prose">
+          <p>where \(W_2\) depends only on \(Q\), \(A\) and the penalty \(\rho\), and \(b_2\) is affine in \(q(p)\) and \(c(p)\). The weights are derived, not learned, so the layer is an exact optimizer step. Stacking \(K\) of them behind the MLP gives the proxy</p>
+        </div>
+        <div class="math">
+$$
+\begin{pmatrix} x^{*} \\ \beta^{*} \end{pmatrix} \approx \mathrm{ADMM\text{-}ReLU}_{K,\rho}\big( \mathcal{N}(p;\theta, M, L) \big),
+$$
+        </div>
+        <div class="prose">
+          <p>with \(\mathcal{N}\) an \(L\)-layer ReLU network of width \(M\). ReLU networks represent piecewise-affine maps with exponentially many regions, which is exactly the structure of the mpQP solution map that explicit MPC tries to tabulate.</p>
+        </div>
+        <figure class="figure figure-medium">
+          <picture>
+            <source srcset="static/figures/admm_convergence_a4_dark.png" media="(prefers-color-scheme: dark)">
+            <img src="static/figures/admm_convergence_a4.png" alt="Relative solution error versus ADMM iteration over 100 random QPs with n = 500 and m = 1000. The low-dimensional ADMM(ReLU) median drops to 1e-5 within about a thousand iterations while full-dimensional ADMM needs around eight thousand; shaded bands show the 5 to 95 percent range" width="1800" height="1249">
+          </picture>
+          <figcaption>Low-dimensional ADMM(ReLU) versus full-dimensional ADMM on 100 random QPs (n = 500, m = 1000). Lines are medians, bands the 5 to 95 percent range.</figcaption>
+        </figure>
+        <h3>Self-supervised training and online certification</h3>
+        <div class="prose">
+          <p>The optimality conditions of the QP define a residual on any primal-dual pair,</p>
+        </div>
+        <div class="math">
+$$
+r(x, \beta; p) \triangleq
+\begin{bmatrix}
+Q x - A^{\top} \beta + q(p) \\
+\beta - \max\!\big(0,\, \beta - A x + c(p)\big)
+\end{bmatrix},
+\qquad
+\mathrm{dist}\big((x,\beta), \mathcal{S}(p)\big) \leq \kappa(p)\, \| r(x,\beta;p) \|_2 ,
+$$
+        </div>
+        <div class="prose">
+          <p>which vanishes exactly on the solution set \(\mathcal{S}(p)\) and bounds the distance to it. Training minimizes the residual of the full proxy over parameters sampled from \(\mathcal{P}\), with a logarithm to tame the many orders of magnitude across instances:</p>
+        </div>
+        <div class="math">
+$$
+\mathcal{L}(\theta) = \mathbb{E}_{p \sim \mathcal{D}} \Big[ \log\Big( \big\| r\big(\mathrm{ADMM\text{-}ReLU}_{K,\rho}(\mathcal{N}(p;\theta,M,L));\, p\big) \big\|_2^2 + 1 \Big) \Big].
+$$
+        </div>
+        <div class="prose">
+          <p>No OSQP call appears anywhere in training. The unrolling depth matters: back-propagating through ten or fewer layers mostly sees ADMM convergence noise and fails to compress, while 25 or more layers make training stable and let the warm start land where a few layers can finish. At inference the same residual is evaluated for every instance in the batch; instances above the tolerance \(\epsilon_{\mathrm{on}}\) get additional ADMM(ReLU) layers, so every returned \(x\) comes with a certificate and the dual \(\beta\) comes for free.</p>
+        </div>
+      </div>
+    </section>
+    <section id="results" class="alt">
+      <div class="wrap wrap-narrow">
+        <h2>Results</h2>
+        <div class="prose">
+          <p>All experiments ran on a single RTX 3080. The supervised baseline LQPNet shares the same MLP backbone but is regressed on OSQP labels; ADMM(ReLU) denotes the low-dimensional scheme started cold from \(x = \beta = 0\).</p>
+        </div>
+        <h3 id="results-compression">Compressing the trajectory</h3>
+        <div class="prose">
+          <p>On random mpQPs with n = 100, m = 200 and 20 parameters, the depth \(K_{\text{train}}\) of the unrolled layers decides whether anything is compressed at all. Shallow unrolling stalls near a relative error of one; from 25 layers on, training converges and the trained warm start reaches a residual of \(10^{-7}\) in 1.7 to 1.8 times fewer iterations than a cold start.</p>
+        </div>
+        <div class="figure-pair">
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/training_ablation_n100_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/training_ablation_n100.png" alt="Test relative error versus training epoch for MLP(ReLU) alone and with 1, 5, 10, 25 and 50 unrolled ADMM(ReLU) layers at n = 100; the 25- and 50-layer runs decrease steadily to about 0.03 while the 1-, 5- and 10-layer runs stall near 1" width="1800" height="1296">
+            </picture>
+            <figcaption>(a) Training: test relative error at fixed \(K_{\text{eval}} = 10\) versus epoch.</figcaption>
+          </figure>
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/inference_ablation_n100_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/inference_ablation_n100.png" alt="KKT residual versus inference refinement step K after training; cold-started low-dimensional ADMM(ReLU) crosses 1e-7 near 4700 iterations, the 25- and 50-layer TQPNet variants near 2800, and full-dimensional ADMM stays above 1e-1" width="1800" height="1296">
+            </picture>
+            <figcaption>(b) Inference: KKT residual versus refinement steps after training.</figcaption>
+          </figure>
+        </div>
+        <figure class="table-figure">
+          <div class="table-wrap">
+            <table class="results">
+              <thead><tr><th scope="col">Method</th><th scope="col">Iterations to 10<sup>-7</sup></th><th scope="col">Time (ms)</th><th scope="col">Speedup</th></tr></thead>
+              <tbody>
+                <tr><td>Full-dimensional ADMM</td><td>&gt; 10<sup>4</sup></td><td>&gt; 50.5</td><td>—</td></tr>
+                <tr><td>Low-dimensional ADMM(ReLU), cold start</td><td>4729</td><td>10.69</td><td>1.0×</td></tr>
+                <tr><td>MLP(ReLU) only</td><td>3578</td><td>7.78</td><td>1.4×</td></tr>
+                <tr><td>MLP(ReLU) + 10-layer ADMM(ReLU)</td><td>3392</td><td>7.31</td><td>1.5×</td></tr>
+                <tr class="highlight"><td>MLP(ReLU) + 25-layer ADMM(ReLU)</td><td><strong>2800</strong></td><td><strong>6.46</strong></td><td><strong>1.7×</strong></td></tr>
+                <tr class="highlight"><td>MLP(ReLU) + 50-layer ADMM(ReLU)</td><td><strong>2778</strong></td><td><strong>6.03</strong></td><td><strong>1.8×</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <figcaption>Median iterations and wall-clock to a KKT residual of 10<sup>-7</sup> over 100 test mpQPs (n = 100, m = 200, n<sub>p</sub> = 20).</figcaption>
+        </figure>
+        <h3 id="results-generalization">Generalization under distribution shift</h3>
+        <div class="prose">
+          <p>Both proxies are trained on parameters drawn from \(\mathcal{U}[-1,1]^{20}\) and tested on progressively shifted ranges. In distribution the supervised LQPNet is more accurate, but it needs an OSQP label for every training point and offers no certificate. Under shift the gap narrows monotonically, from 3.9× in distribution to 1.8× far out of distribution: training on the residual learns features that are more invariant to the parameter than direct regression on \(x^{*}\).</p>
+        </div>
+        <figure class="figure figure-wide">
+          <picture>
+            <source srcset="static/figures/generalizability_violin_dark.png" media="(prefers-color-scheme: dark)">
+            <img src="static/figures/generalizability_violin.png" alt="Violin plots of relative solution error for TQPNet and LQPNet at K = 10, 30 and 50 on the Train, Valid, Boundary and OOD parameter sets; LQPNet is lower in distribution, and both rise together under shift with the gap shrinking" width="1800" height="893">
+          </picture>
+          <figcaption>Relative solution error across parameter sets at n = 100, m = 200. Train and Valid: \(\mathcal{U}[-1,1]\); Boundary: \(\mathcal{U}[-2,2]\); OOD: \(\mathcal{U}[-3,3]\); 500 instances each.</figcaption>
+        </figure>
+        <h3 id="results-scalability">Scalability on MPC problems</h3>
+        <div class="prose">
+          <p>Nine MPC-structured QP families from n+m = 60 to 2800 are run in closed loop for 200 steps. TQPNet with K = 10 keeps a near-constant latency of about 1.3 ms while OSQP grows from 0.03 ms to 13 ms; the crossover is at n+m = 875 and the speedup reaches 7× at n+m = 2800, with identical tracking RMSE and closed-loop cost. Explicit MPC built with MPT3 already needs 3123 regions at n+m = 140 and cannot be constructed beyond n+m = 315. Offline, label-free training becomes cheaper than the supervised pipeline for n+m ≥ 2100.</p>
+        </div>
+        <div class="figure-pair">
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/scalability_latency_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/scalability_latency.png" alt="Solve latency in milliseconds versus n+m from 60 to 2800: OSQP rises from 0.03 to 13 ms, TQPNet and LQPNet at K = 10 stay near 1.3 ms, cold ADMM(ReLU) at K = 50 near 4.5 ms, and explicit MPC jumps to 4.1 ms at n+m = 140" width="1800" height="1453">
+            </picture>
+            <figcaption>(a) Online solve latency versus problem size.</figcaption>
+          </figure>
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/scalability_offline_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/scalability_offline.png" alt="Offline preparation time in seconds versus n+m: TQPNet's unsupervised training grows from 65 to 334 s, LQPNet's supervised pipeline from 24 to 590 s, crossing near n+m = 2100; explicit MPC is only feasible at the two smallest sizes" width="1800" height="1477">
+            </picture>
+            <figcaption>(b) Offline time: self-supervised training versus label generation plus supervised training.</figcaption>
+          </figure>
+        </div>
+        <figure class="table-figure">
+          <div class="table-wrap">
+            <table class="results">
+              <thead><tr><th scope="col">n+m</th><th scope="col">OSQP latency (ms)</th><th scope="col">TQPNet latency (ms)</th><th scope="col">Speedup</th><th scope="col">Tracking RMSE (OSQP / TQPNet)</th><th scope="col">Explicit MPC (ms)</th></tr></thead>
+              <tbody>
+                <tr><td>60</td><td>0.03</td><td>1.31</td><td>0.0×</td><td>0.221 / 0.221</td><td>0.57</td></tr>
+                <tr><td>140</td><td>0.07</td><td>1.30</td><td>0.1×</td><td>0.218 / 0.218</td><td>4.11</td></tr>
+                <tr><td>315</td><td>0.21</td><td>1.23</td><td>0.2×</td><td>0.217 / 0.217</td><td>—</td></tr>
+                <tr><td>560</td><td>0.59</td><td>1.31</td><td>0.4×</td><td>0.263 / 0.264</td><td>—</td></tr>
+                <tr class="sep"><td>875</td><td>1.38</td><td>1.27</td><td>1.1×</td><td>0.217 / 0.217</td><td>—</td></tr>
+                <tr><td>1050</td><td>2.12</td><td>1.36</td><td>1.6×</td><td>0.240 / 0.240</td><td>—</td></tr>
+                <tr><td>1400</td><td>3.55</td><td>1.33</td><td>2.7×</td><td>0.198 / 0.198</td><td>—</td></tr>
+                <tr><td>2100</td><td>7.22</td><td>1.45</td><td>5.0×</td><td>0.217 / 0.218</td><td>—</td></tr>
+                <tr class="highlight"><td>2800</td><td>13.06</td><td><strong>1.88</strong></td><td><strong>7.0×</strong></td><td>0.225 / 0.225</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <figcaption>Closed-loop MPC over 200 steps with shared process noise; TQPNet uses K = 10 and a fixed 512 × 4 network at every scale. Explicit MPC is infeasible beyond n+m = 140.</figcaption>
+        </figure>
+      </div>
+      <div class="wrap wrap-narrow" id="quadruped">
+        <h3>Quadruped locomotion with 4096 robots</h3>
+        <div class="prose">
+          <p>Convex MPC for a Unitree A1 runs at 50 Hz over a 16-step horizon; each control cycle is a QP with 192 variables and 384 constraints parameterized by 18 quantities such as body orientation, height, commanded velocities and the contact schedule. TQPNet is trained offline from sampled parameters only, in under five minutes on one RTX 3080, with no environment interaction and no solver labels. Deployed in Isaac Gym, every simulated robot is an independent QP instance, and all of them are solved in a single batched pass per control cycle.</p>
+        </div>
+        <figure class="figure figure-wide">
+          <video autoplay muted loop playsinline preload="metadata" poster="static/video/isaacgym_closeup_poster.jpg" aria-label="Close-up of several simulated Unitree A1 quadrupeds trotting on a checkerboard floor in Isaac Gym under TQPNet model predictive control">
+            <source src="static/video/isaacgym_closeup.mp4" type="video/mp4">
+            <source src="static/video/isaacgym_closeup.webm" type="video/webm">
+          </video>
+          <figcaption>(a) Close-up of the Isaac Gym batch: each robot follows its own randomized velocity and yaw-rate command, and all 4096 QPs are solved together by TQPNet with K = 10.</figcaption>
+        </figure>
+        <div class="prose">
+          <p>The learned warm start is what makes the short refinement sufficient. Batch latency stays near constant until the GPU saturates, while qpth's interior-point solve grows with the batch. Against the OSQP optimum, TQPNet's cost error and constraint violation drop below \(10^{-2}\) within fewer than 20 refinement steps, whereas the cold-started ADMM(ReLU) needs more than 60 to reach the same accuracy.</p>
+        </div>
+        <div class="figure-trio">
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/batch_qp_timing_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/batch_qp_timing.png" alt="Solve latency in milliseconds versus number of robots from 1 to 8192 on log axes: qpth climbs from 14 ms to over 4000 ms, cold ADMM(ReLU) at K = 50 from 10 to 240 ms, TQPNet at K = 10 from 2 to 50 ms, K = 20 from 4 to 95 ms, and K = 0 stays below 1 ms" width="1800" height="1467">
+            </picture>
+            <figcaption>(b) Batch solve latency versus number of parallel robots.</figcaption>
+          </figure>
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/qp_cost_vs_K_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/qp_cost_vs_K.png" alt="Relative QP cost error against the OSQP optimum versus refinement steps K: TQPNet falls below 1e-2 by K = 10 and settles near 1.3e-3, cold ADMM(ReLU) needs about 60 steps to reach 1e-2, and qpth is a flat reference near 2e-3" width="1800" height="1448">
+            </picture>
+            <figcaption>(c) Relative QP cost error versus refinement steps K.</figcaption>
+          </figure>
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/qp_violation_vs_K_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/qp_violation_vs_K.png" alt="Maximum constraint violation versus refinement steps K: TQPNet drops below 1e-2 within 10 steps and reaches 1e-4 by K = 60, while cold ADMM(ReLU) is still near 1e-3 at K = 100" width="1800" height="1454">
+            </picture>
+            <figcaption>(d) Maximum constraint violation versus refinement steps K.</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="wrap wrap-narrow">
+        <h3 id="results-uav">Quadrotor tracking with bounded latency</h3>
+        <div class="prose">
+          <p>A single quadrotor tracks a lemniscate reference under MPC with a 25-step horizon (n = 100, m = 300) for 600 steps. All methods overlap at trajectory resolution and tracking errors are within the same magnitude as OSQP. The difference is the tail: OSQP's worst-case solve is 10 to 25 times its median because the iteration count varies from step to step, whereas TQPNet at fixed K has bounded execution.</p>
+        </div>
+        <div class="figure-pair">
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/uav_trajectory_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/uav_trajectory.png" alt="Closed-loop quadrotor trajectories in the x-y plane tracking a figure-eight reference; OSQP, cold ADMM(ReLU) with K = 50 and TQPNet with K = 30 all overlap the reference" width="1800" height="1033">
+            </picture>
+            <figcaption>(a) Lemniscate tracking: reference, OSQP, cold ADMM(ReLU) (K = 50) and TQPNet (K = 30) overlap.</figcaption>
+          </figure>
+          <figure class="figure">
+            <picture>
+              <source srcset="static/figures/uav_tracking_error_dark.png" media="(prefers-color-scheme: dark)">
+              <img src="static/figures/uav_tracking_error.png" alt="Position error in metres over 45 seconds for OSQP, cold ADMM(ReLU) and TQPNet; all three fluctuate between about 0.005 and 0.05 m with the same pattern" width="1800" height="1201">
+            </picture>
+            <figcaption>(b) Position error over time for the same three controllers.</figcaption>
+          </figure>
+        </div>
+        <figure class="table-figure">
+          <div class="table-wrap">
+            <table class="results">
+              <thead><tr><th scope="col">Method</th><th scope="col">RMSE (m)</th><th scope="col">Latency median / max (ms)</th><th scope="col">Iterations median / max</th></tr></thead>
+              <tbody>
+                <tr><td>OSQP (ε = 10<sup>-6</sup>)</td><td>0.0273</td><td>0.73 / 7.03</td><td>50 / 450</td></tr>
+                <tr><td>OSQP (ε = 10<sup>-8</sup>)</td><td>0.0273</td><td>0.75 / 21.10</td><td>50 / 1500</td></tr>
+                <tr class="sep"><td>ADMM(ReLU), cold (K = 50)</td><td>0.0306</td><td>5.84 / 13.05</td><td>50 / 50</td></tr>
+                <tr class="highlight"><td>TQPNet (K = 10)</td><td>0.0302</td><td><strong>1.67 / 4.39</strong></td><td>10 / 10</td></tr>
+                <tr class="highlight"><td>TQPNet (K = 30)</td><td><strong>0.0297</strong></td><td>3.90 / 10.66</td><td>30 / 30</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <figcaption>Single-UAV lemniscate tracking over 600 steps. OSQP is called through its C API with warm-started updates between steps.</figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="citation">
+      <div class="wrap wrap-narrow">
+        <h2>Citation</h2>
+        <div class="bibtex-box">
+          <button id="copy-bibtex" type="button" class="btn">Copy BibTeX</button>
+<pre id="bibtex"><code>@inproceedings{wu2026neural,
+  title     = {Neural Compression of Long {ADMM} Trajectory for Multiparametric Quadratic Program},
+  author    = {Wu, Liang and Zheng, Honghui and Yang, Bo and Yang, Xu and Mo, Yilin and Drgo{\v{n}}a, J{\'a}n},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}</code></pre>
+        </div>
+        <p class="links">Conference page: <a href="https://neurips.cc/virtual/2026/poster/149158">NeurIPS 2026</a> · Code: <a href="https://github.com/SOLARIS-JHU/TQPNet">github.com/SOLARIS-JHU/TQPNet</a> · Questions: <a href="mailto:hzheng39@jh.edu">hzheng39@jh.edu</a></p>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <div class="wrap">
+      <p>Code released under the Apache-2.0 License. Built on <a href="https://github.com/jax-ml/jax">JAX</a>, <a href="https://github.com/google/flax">Flax</a>, <a href="https://pytorch.org/">PyTorch</a> and <a href="https://osqp.org/">OSQP</a>; the quadruped stack adapts <a href="https://github.com/yinghansun/pympc-quadruped">pympc-quadruped</a>. Supported by the <a href="https://energyinstitute.jhu.edu/">Ralph O'Connor Sustainable Energy Institute</a> at Johns Hopkins University and by the U.S. DOE Office of Science, ASCR program, under the SciDAC Institute "LEADS: LEarning-Accelerated Domain Science".</p>
+    </div>
+  </footer>
+  <script src="main.js" defer></script>
+</body>
+</html>
