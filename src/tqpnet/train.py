@@ -110,9 +110,10 @@ def train(
         for b in range(n_batches):
             P = dataset[perm[b * batch_size:(b + 1) * batch_size]]
             variables, opt_state, loss, mean_res, finite = step(variables, opt_state, lr_now, P)
-            losses.append(float(loss))
-            residuals.append(float(mean_res))
-            history["updates"] += int(finite)
+            ok = bool(finite)
+            losses.append(float(loss) if ok else float("nan"))
+            residuals.append(float(mean_res) if ok else float("nan"))
+            history["updates"] += int(ok)
 
         epoch_loss = float(jnp.nanmean(jnp.asarray(losses)))
         epoch_res = float(jnp.nanmean(jnp.asarray(residuals)))

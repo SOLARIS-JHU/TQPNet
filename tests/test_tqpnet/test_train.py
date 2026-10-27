@@ -68,3 +68,12 @@ def test_lr_schedule_halves_every_step_epochs():
                     weight_decay=0.0, K_train=5, tol_off=0.0, log_every=1000, key=jax.random.PRNGKey(0),
                     lr_step_epochs=2, lr_gamma=0.5)
     assert hist["lr"] == [1e-3, 1e-3, 5e-4, 5e-4, 2.5e-4]
+
+
+def test_infinite_loss_batches_are_recorded_as_nan():
+    op, net, var, data, q_fn, c_fn = _setup()
+    # q offset of 1e200 makes the squared residual overflow to +inf without producing NaN
+    _, hist = train(net, var, op, data, lambda p: q_fn(p) + 1e200, c_fn, epochs=2, batch_size=16,
+                    lr=1e-3, weight_decay=0.0, K_train=5, tol_off=1e-8, log_every=1000,
+                    key=jax.random.PRNGKey(0))
+    assert all(np.isnan(hist["loss"])) and all(np.isnan(hist["residual"])) and hist["updates"] == 0

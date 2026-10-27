@@ -93,3 +93,35 @@ def test_single_sample_and_wrong_np():
         model.solve(jnp.zeros((3, 5)))
     with pytest.raises(ValueError):
         model.solve(jnp.zeros((2, 3, 2)))
+
+
+def test_float32_q_with_rounding_asymmetry_is_accepted():
+    # Q = Bᵀ D B + 0.1 I computed in float32 (default JAX precision) is symmetric up to rounding.
+    rng = np.random.default_rng(0)
+    B = jnp.asarray(rng.normal(size=(30, 30)), dtype=jnp.float32)
+    D = jnp.asarray(rng.uniform(0.5, 2.0, size=30), dtype=jnp.float32)
+    Q = B.T @ (D[:, None] * B) + 0.1 * jnp.eye(30, dtype=jnp.float32)
+    assert float(jnp.max(jnp.abs(Q - Q.T))) > 0.0
+    prob = random_qp(30, 40, 2)
+    q_fn, c_fn = q_fn_c_fn(prob)
+    m = Model()
+    m.set_problem(Q, prob["A"], q_fn, c_fn)   # must not raise
+    assert m.n == 30
+
+
+def test_float32_inputs_under_x64_do_not_crash():
+    model, prob, q_fn, c_fn = _model()
+    model.Params.Train.epochs = 2
+    model.set_sampler(lambda key, n: jax.random.uniform(key, (n, 2), dtype=jnp.float32, minval=-1.0, maxval=1.0))
+    model.train()
+    r = model.solve(np.zeros((2, 2), dtype=np.float32))
+    assert r.x.shape == (2, 4) and bool(jnp.all(jnp.isfinite(r.x)))
+
+
+def test_k_infer_defaults_to_the_k_train_used_in_training():
+    model, *_ = _model()
+    model.Params.Train.epochs, model.Params.Train.K_train = 2, 3
+    model.train()
+    model.Params.Train.K_train = 7          # changed after training: must not affect inference depth
+    model.Params.Solve.K_max = 0
+    assert bool(jnp.all(model.solve(jnp.zeros((2, 2))).steps == 3))

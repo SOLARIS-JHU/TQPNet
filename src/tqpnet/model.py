@@ -45,6 +45,7 @@ class Model:
         self._net: Optional[WarmStartNet] = None
         self._variables = None
         self._n_p: Optional[int] = None
+        self._K_train: Optional[int] = None   # K_train used in the last train() call
 
     # ------------------------------------------------------------------
     # Problem definition
@@ -71,8 +72,9 @@ class Model:
         if A.ndim != 2 or A.shape[1] != n:
             raise ValueError(f"A must have shape (m, {n}), got {A.shape}")
         asym = float(jnp.max(jnp.abs(Q - Q.T)))
-        if asym > 1e-8 * max(1.0, float(jnp.max(jnp.abs(Q)))):
-            raise ValueError(f"Q must be symmetric (max |Q - Q^T| = {asym:.3e})")
+        sym_tol = 100.0 * float(jnp.finfo(Q.dtype).eps) * max(1.0, float(jnp.max(jnp.abs(Q))))
+        if asym > sym_tol:
+            raise ValueError(f"Q must be symmetric (max |Q - Q^T| = {asym:.3e} > {sym_tol:.3e})")
         if bool(jnp.any(jnp.all(A == 0, axis=1))):
             raise ValueError("every row of A must contain a non-zero entry")
         if bool(jnp.any(jnp.all(A == 0, axis=0))):
@@ -80,7 +82,7 @@ class Model:
 
         self._Q, self._A = Q, A
         self._q_fn, self._c_fn = q_fn, c_fn
-        self._op = self._net = self._variables = self._n_p = None
+        self._op = self._net = self._variables = self._n_p = self._K_train = None
 
     def set_sampler(self, sampler_fn: Callable) -> None:
         """Set the parameter sampler ``sampler_fn(key, n_samples) -> (n_samples, n_p)``."""
@@ -141,6 +143,7 @@ class Model:
             grad_clip=tp.grad_clip, lr_step_epochs=tp.lr_step_epochs, lr_gamma=tp.lr_gamma,
         )
         self._op, self._net, self._variables, self._n_p = op, net, variables, n_p
+        self._K_train = tp.K_train
         return history
 
     # ------------------------------------------------------------------
@@ -154,7 +157,7 @@ class Model:
         P = jnp.atleast_2d(jnp.asarray(P))
         if P.ndim != 2 or P.shape[1] != self._n_p:
             raise ValueError(f"P must have shape (batch, {self._n_p}) or ({self._n_p},), got {P.shape}")
-        sp, tp = self.Params.Solve, self.Params.Train
-        K_infer = tp.K_train if sp.K_infer is None else sp.K_infer
+        sp = self.Params.Solve
+        K_infer = self._K_train if sp.K_infer is None else sp.K_infer
         return _solve(self._net, self._variables, self._op, P, self._q_fn, self._c_fn,
                       K_infer=K_infer, tol_on=sp.tol_on, K_max=sp.K_max)

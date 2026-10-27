@@ -89,8 +89,13 @@ def admm_relu_step(op: ADMMOperator, x, beta, q, c) -> Tuple[jax.Array, jax.Arra
 def admm_relu(op: ADMMOperator, x0, beta0, q, c, K: int) -> Tuple[jax.Array, jax.Array]:
     """Apply ``K`` ADMM(ReLU) layers from (x0, beta0). ``K`` must be a Python int.
 
-    ``beta0`` is used as given (callers clamp it to β ≥ 0 when needed).
+    ``beta0`` is used as given (callers clamp it to β ≥ 0 when needed). Inputs are
+    promoted to a common dtype with the operator so the loop carry is well typed.
     """
+    dt = jnp.result_type(x0, beta0, q, c, op.M1)
+    x0, beta0 = jnp.asarray(x0, dt), jnp.asarray(beta0, dt)
+    q, c = jnp.asarray(q, dt), jnp.asarray(c, dt)
+
     def body(_, carry):
         x, beta = carry
         return admm_relu_step(op, x, beta, q, c)
