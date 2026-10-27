@@ -4,8 +4,8 @@ class TableLogger:
     Example output:
        Epoch         Loss     Residual
     ----------------------------------
-           1     2.341567   9.4e+00
-         100     0.523412   6.9e-01
+           1    2.342e+00    9.400e+00
+         100    5.234e-01    6.900e-01
     """
 
     def __init__(self, log_every: int = 100):
@@ -28,4 +28,4 @@ class TableLogger:
             print(header)
             print("-" * len(header))
             self._header_printed = True
-        print(f"{epoch:>8d} {loss:>12.6f} {residual:>12.3e}")
+        print(f"{epoch:>8d} {loss:>12.3e} {residual:>12.3e}")

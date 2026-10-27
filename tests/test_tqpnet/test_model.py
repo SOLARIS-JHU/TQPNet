@@ -89,8 +89,10 @@ def test_single_sample_and_wrong_np():
     model.train()
     r = model.solve(jnp.zeros(2))
     assert r.x.shape == (1, 4)
-    with pytest.raises(ValueError, match="2"):
+    with pytest.raises(ValueError, match=r"2.*\(3, 5\)"):
         model.solve(jnp.zeros((3, 5)))
+    with pytest.raises(ValueError, match=r"\(5,\)"):      # the user's shape, not the atleast_2d one
+        model.solve(jnp.zeros(5))
     with pytest.raises(ValueError):
         model.solve(jnp.zeros((2, 3, 2)))
 
@@ -125,3 +127,20 @@ def test_k_infer_defaults_to_the_k_train_used_in_training():
     model.Params.Train.K_train = 7          # changed after training: must not affect inference depth
     model.Params.Solve.K_max = 0
     assert bool(jnp.all(model.solve(jnp.zeros((2, 2))).steps == 3))
+
+
+@pytest.mark.parametrize("field, value", [("K_infer", -1), ("K_max", -1)])
+def test_negative_solve_depths_are_rejected(field, value):
+    model, *_ = _model()
+    model.Params.Train.epochs = 2
+    model.train()
+    setattr(model.Params.Solve, field, value)
+    with pytest.raises(ValueError, match=field):
+        model.solve(jnp.zeros((1, 2)))
+
+
+def test_negative_k_train_is_rejected():
+    model, *_ = _model()
+    model.Params.Train.K_train = -1
+    with pytest.raises(ValueError, match="K_train"):
+        model.train()

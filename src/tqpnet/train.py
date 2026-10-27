@@ -4,6 +4,7 @@ The loss is the paper's self-supervised objective
 
     L(θ) = mean_p log(1 + ‖r(ADMM-ReLU_K(N(p; θ)); p)‖²),
 
+with ‖r‖² in the weighted form ‖r₁‖²/n + ‖r₂‖²/m of :func:`tqpnet.admm.residual`,
 evaluated on a fixed training set D drawn once from the user's sampler.
 
 The optimisation loop is aligned with the scripts that produced the paper's
@@ -99,24 +100,26 @@ def train(
 
         finite = jnp.isfinite(loss)
         variables, opt_state = jax.lax.cond(finite, apply, lambda _: (variables, opt_state), None)
-        return variables, opt_state, loss, mean_res, finite
+        nan = jnp.asarray(jnp.nan, dtype=loss.dtype)
+        return variables, opt_state, jnp.where(finite, loss, nan), jnp.where(finite, mean_res, nan), finite
 
     history: Dict = {"loss": [], "residual": [], "lr": [], "epochs": 0, "updates": 0}
     for epoch in range(1, epochs + 1):
         lr_now = lr * lr_gamma ** ((epoch - 1) // lr_step_epochs)
         key, subkey = jax.random.split(key)
         perm = jax.random.permutation(subkey, N)
-        losses, residuals = [], []
+        losses, residuals, finites = [], [], []
         for b in range(n_batches):
             P = dataset[perm[b * batch_size:(b + 1) * batch_size]]
             variables, opt_state, loss, mean_res, finite = step(variables, opt_state, lr_now, P)
-            ok = bool(finite)
-            losses.append(float(loss) if ok else float("nan"))
-            residuals.append(float(mean_res) if ok else float("nan"))
-            history["updates"] += int(ok)
+            losses.append(loss)        # device scalars; NaN for skipped batches
+            residuals.append(mean_res)
+            finites.append(finite)
 
-        epoch_loss = float(jnp.nanmean(jnp.asarray(losses)))
-        epoch_res = float(jnp.nanmean(jnp.asarray(residuals)))
+        # one host sync per epoch
+        epoch_loss = float(jnp.nanmean(jnp.stack(losses)))
+        epoch_res = float(jnp.nanmean(jnp.stack(residuals)))
+        history["updates"] += int(jnp.sum(jnp.stack(finites)))
         history["loss"].append(epoch_loss)
         history["residual"].append(epoch_res)
         history["lr"].append(lr_now)

@@ -26,3 +26,10 @@ def test_params_defaults():
     assert (p.Train.lr, p.Train.weight_decay, p.Train.tol_off, p.Train.log_every) == (1e-3, 1e-5, 1e-8, 100)
     assert (p.Train.grad_clip, p.Train.lr_step_epochs, p.Train.lr_gamma) == (10.0, 300, 0.5)
     assert (p.Solve.K_infer, p.Solve.tol_on, p.Solve.K_max) == (None, 1e-4, 1000)
+
+
+def test_table_logger_prints_small_losses_in_scientific_notation(capsys):
+    from tqpnet.utils.log import TableLogger
+    TableLogger(log_every=1).log(1, 10, loss=4.8e-7, residual=4.8e-7)
+    out = capsys.readouterr().out
+    assert "4.800e-07" in out and "0.000000" not in out

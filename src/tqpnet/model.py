@@ -58,8 +58,8 @@ class Model:
             Q:    (n, n) symmetric positive semidefinite cost matrix (fixed).
             A:    (m, n) constraint matrix (fixed); every row and every column must
                   contain a non-zero entry (required by the paper's D_U, D_V lemma).
-            q_fn: callable p ↦ q(p) of shape (n,), traceable by ``jax.vmap``.
-            c_fn: callable p ↦ c(p) of shape (m,), traceable by ``jax.vmap``.
+            q_fn: callable p ↦ q(p) of shape (n,), traceable by ``jax.vmap`` and ``jax.jit``.
+            c_fn: callable p ↦ c(p) of shape (m,), traceable by ``jax.vmap`` and ``jax.jit``.
         """
         Q = jnp.asarray(Q)
         if not jnp.issubdtype(Q.dtype, jnp.floating):
@@ -116,6 +116,8 @@ class Model:
         if self._sampler_fn is None:
             raise RuntimeError("Call set_sampler() first.")
         tp, netp = self.Params.Train, self.Params.Network
+        if not isinstance(tp.K_train, int) or tp.K_train < 0:
+            raise ValueError(f"Params.Train.K_train must be a non-negative int, got {tp.K_train!r}")
         n, m = self.n, self.m
 
         key = jax.random.PRNGKey(seed)
@@ -151,13 +153,19 @@ class Model:
     # ------------------------------------------------------------------
 
     def solve(self, P) -> SolveResult:
-        """Online phase of Algorithm 2 for one parameter vector (n_p,) or a batch (batch, n_p)."""
+        """Online phase of Algorithm 2 for a batch ``(batch, n_p)``; a 1-D ``(n_p,)`` input is one instance."""
         if self._variables is None:
             raise RuntimeError("Call train() before solve().")
-        P = jnp.atleast_2d(jnp.asarray(P))
+        P = jnp.asarray(P)
+        shape_in = P.shape
+        P = jnp.atleast_2d(P)
         if P.ndim != 2 or P.shape[1] != self._n_p:
-            raise ValueError(f"P must have shape (batch, {self._n_p}) or ({self._n_p},), got {P.shape}")
+            raise ValueError(f"P must have shape (batch, {self._n_p}) or ({self._n_p},), got {shape_in}")
         sp = self.Params.Solve
         K_infer = self._K_train if sp.K_infer is None else sp.K_infer
+        if not isinstance(K_infer, int) or K_infer < 0:
+            raise ValueError(f"Params.Solve.K_infer must be a non-negative int or None, got {sp.K_infer!r}")
+        if not isinstance(sp.K_max, int) or sp.K_max < 0:
+            raise ValueError(f"Params.Solve.K_max must be a non-negative int, got {sp.K_max!r}")
         return _solve(self._net, self._variables, self._op, P, self._q_fn, self._c_fn,
                       K_infer=K_infer, tol_on=sp.tol_on, K_max=sp.K_max)
