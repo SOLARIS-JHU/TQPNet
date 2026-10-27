@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tqpnet"
 version = "0.1.0"
-description = "TQPNet: learned warm starts with low-dimensional ADMM-ReLU refinement for parametric QPs"
+description = "TQPNet: neural compression of long ADMM trajectories for multiparametric QPs (MLP(ReLU) warm start + unrolled low-dimensional ADMM(ReLU) refinement)"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"

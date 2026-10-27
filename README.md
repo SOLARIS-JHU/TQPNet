@@ -92,31 +92,32 @@ Train a proxy for a small QP family and solve a batch of instances with certific
 ```python
 import jax
 import jax.numpy as jnp
-from tulip_qp import Model
+import numpy as np
+from tqpnet import Model, box_sampler
 
-# QP family: min 1/2 x'Qx + q(p)'x  s.t.  A x >= c(p),  with p = [c, q]
-n, m = 2, 1
-Q = jnp.eye(n)
-A = jnp.ones((m, n))
+# QP family: min 1/2 x'Qx + q(p)'x  s.t.  A x >= c(p),  with fixed Q, A and  q(p) = q0 + Cq p,  c(p) = c0 + Cc p
+n, m, n_p = 10, 20, 4
+rng = np.random.default_rng(0)
+L = rng.normal(size=(n, n)); Q = L @ L.T / n + 0.1 * np.eye(n)
+A = rng.uniform(0.0, 3.0, size=(m, n)) * (rng.random((m, n)) < 0.5)
+A[np.arange(m), rng.integers(0, n, m)] += 1.0          # every row non-empty
+A[rng.integers(0, m, n), np.arange(n)] += 1.0          # every column non-empty
+q0, Cq = rng.normal(size=n), 0.3 * rng.normal(size=(n, n_p))
+c0, Cc = A @ rng.normal(size=n) - 1.0, 0.1 * rng.normal(size=(m, n_p))
 
 model = Model("demo")
-model.set_problem(
-    Q_fn=lambda p: Q,
-    q_fn=lambda p: p[m:],
-    A_fn=lambda p: A,
-    c_fn=lambda p: p[:m],
-    n=n, m=m,
-)
-model.set_sampler(lambda key, batch: jax.random.uniform(key, (batch, m + n), minval=-1.0, maxval=1.0))
-model.Params.Train.epochs = 300
+model.set_problem(Q, A, q_fn=lambda p: q0 + Cq @ p, c_fn=lambda p: c0 + Cc @ p)
+model.set_sampler(box_sampler(lo=-np.ones(n_p), hi=np.ones(n_p)))
+model.Params.Train.n_train, model.Params.Train.epochs, model.Params.Train.K_train = 2000, 300, 10
 model.train()
 
-P = jax.random.uniform(jax.random.PRNGKey(1), (8, m + n), minval=-1.0, maxval=1.0)
+P = jax.random.uniform(jax.random.PRNGKey(1), (8, n_p), minval=-1.0, maxval=1.0)
 result = model.solve(P)
-print(result.x.shape, bool(result.feasible.all()), int(result.used_backup.sum()))
+print(result.x.shape, int(result.certified.sum()), int(result.refined.sum()), result.steps)
+print(float(result.max_violation.max()))
 ```
 
-`model.solve` returns the primal solutions, a per-instance feasibility flag, the residual certificate, and whether the backup refinement was triggered. Hyperparameters live in `model.Params.Network`, `model.Params.Train` and `model.Params.Solve`.
+`model.solve` runs the MLP(ReLU) warm start through `K_infer` ADMM(ReLU) layers (default: the `K_train` used in training), computes the paper's residual certificate, and keeps refining only the instances whose certificate exceeds `tol_on`, up to `K_max` extra layers. The result reports the certificate, whether each instance is certified, the actual constraint violation, the number of layers used and whether refinement was triggered. `certified` is the paper's residual test: it bounds each constraint violation only by about √(m·tol_on), so check `max_violation` when feasibility matters. Hyperparameters live in `model.Params.Network`, `model.Params.Train` and `model.Params.Solve`, with defaults matching the paper's experiments. Q and A are fixed per problem family (the paper's Eq. 1); only q(p) and c(p) vary with the parameter.
 
 ## Reproducing the Paper
 
@@ -135,13 +136,13 @@ Every figure and table maps to a script under `experiments/`; the figure-by-figu
 
 ```
 TQPNet/
-├── src/tulip_qp/             # Core JAX package (import name: tulip_qp)
+├── src/tqpnet/               # Core JAX package (import name: tqpnet)
 │   ├── model.py              # Model: set_problem / set_sampler / train / solve
 │   ├── network.py            # MLP(ReLU) warm-start network
-│   ├── loss.py               # Self-supervised ADMM-residual loss
-│   ├── solve.py              # Certified online solve with backup refinement
-│   ├── train.py              # Training loop
-│   ├── sampler.py            # Parameter samplers
+│   ├── admm.py               # Low-dimensional ADMM(ReLU) layer, residual, unrolled loss
+│   ├── train.py              # Offline training (Algorithm 2)
+│   ├── solve.py              # Certified online solve with triggered refinement
+│   ├── sampler.py            # Box parameter sampler
 │   └── params.py             # Hyperparameter dataclasses
 ├── experiments/              # Paper experiments (PyTorch)
 │   ├── admm/                 # ADMM convergence (Fig. 2)
