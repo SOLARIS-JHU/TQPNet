@@ -1,4 +1,5 @@
 """User-facing two-phase API: define a QP family, train the proxy offline, solve online."""
+import operator
 from typing import Callable, Dict, Optional
 
 import jax
@@ -10,6 +11,17 @@ from tqpnet.params import Params
 from tqpnet.solve import SolveResult
 from tqpnet.solve import solve as _solve
 from tqpnet.train import train as _train
+
+
+def _nonneg_int(value, name: str) -> int:
+    """Coerce an integral value (Python or numpy int) to a non-negative Python int."""
+    try:
+        k = operator.index(value)
+    except TypeError:
+        raise ValueError(f"{name} must be a non-negative int, got {value!r}") from None
+    if k < 0:
+        raise ValueError(f"{name} must be a non-negative int, got {value!r}")
+    return k
 
 
 class Model:
@@ -116,8 +128,7 @@ class Model:
         if self._sampler_fn is None:
             raise RuntimeError("Call set_sampler() first.")
         tp, netp = self.Params.Train, self.Params.Network
-        if not isinstance(tp.K_train, int) or tp.K_train < 0:
-            raise ValueError(f"Params.Train.K_train must be a non-negative int, got {tp.K_train!r}")
+        K_train = _nonneg_int(tp.K_train, "Params.Train.K_train")
         n, m = self.n, self.m
 
         key = jax.random.PRNGKey(seed)
@@ -141,11 +152,11 @@ class Model:
         variables, history = _train(
             net, variables, op, dataset, self._q_fn, self._c_fn,
             epochs=tp.epochs, batch_size=tp.batch_size, lr=tp.lr, weight_decay=tp.weight_decay,
-            K_train=tp.K_train, tol_off=tp.tol_off, log_every=tp.log_every, key=k_train,
+            K_train=K_train, tol_off=tp.tol_off, log_every=tp.log_every, key=k_train,
             grad_clip=tp.grad_clip, lr_step_epochs=tp.lr_step_epochs, lr_gamma=tp.lr_gamma,
         )
         self._op, self._net, self._variables, self._n_p = op, net, variables, n_p
-        self._K_train = tp.K_train
+        self._K_train = K_train
         return history
 
     # ------------------------------------------------------------------
@@ -162,10 +173,7 @@ class Model:
         if P.ndim != 2 or P.shape[1] != self._n_p:
             raise ValueError(f"P must have shape (batch, {self._n_p}) or ({self._n_p},), got {shape_in}")
         sp = self.Params.Solve
-        K_infer = self._K_train if sp.K_infer is None else sp.K_infer
-        if not isinstance(K_infer, int) or K_infer < 0:
-            raise ValueError(f"Params.Solve.K_infer must be a non-negative int or None, got {sp.K_infer!r}")
-        if not isinstance(sp.K_max, int) or sp.K_max < 0:
-            raise ValueError(f"Params.Solve.K_max must be a non-negative int, got {sp.K_max!r}")
+        K_infer = self._K_train if sp.K_infer is None else _nonneg_int(sp.K_infer, "Params.Solve.K_infer")
+        K_max = _nonneg_int(sp.K_max, "Params.Solve.K_max")
         return _solve(self._net, self._variables, self._op, P, self._q_fn, self._c_fn,
-                      K_infer=K_infer, tol_on=sp.tol_on, K_max=sp.K_max)
+                      K_infer=K_infer, tol_on=sp.tol_on, K_max=K_max)

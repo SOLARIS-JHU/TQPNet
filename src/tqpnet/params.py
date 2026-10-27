@@ -13,7 +13,10 @@ class NetworkParams:
 class TrainParams:
     """Offline training hyperparameters (Algorithm 2, offline phase).
 
-    Defaults follow the paper's experiment scripts (``experiments/config.py``).
+    Defaults follow the paper's experiment scripts: ``experiments/config.py`` and the
+    inline constants of the scripts (gradient clip 10.0 and StepLR(300, 0.5) in
+    ``training_ablation.py`` / ``generalizability.py``; ``K_train=10`` as in the MPC
+    scalability study, while the n=100 random-mpQP studies use K_train=25).
     """
     n_train:        int   = 6000   # size of the sampled training set D
     epochs:         int   = 2000   # N_epoch

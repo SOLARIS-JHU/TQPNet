@@ -29,7 +29,9 @@ class SolveResult:
         certified:     ``certificate <= tol_on``, shape (batch,), bool. This is the
                        paper's online test; it bounds each constraint violation only
                        by about sqrt(m · tol_on), so check ``max_violation`` when
-                       feasibility matters.
+                       feasibility matters. It bounds the distance to the optimal
+                       solution only through the paper's error bound κ(p)·‖r‖; use a
+                       smaller ``tol_on`` when a tighter solution accuracy is needed.
         max_violation: max_i max(c_i − (A x)_i, 0) per instance, shape (batch,).
         steps:         total ADMM(ReLU) layers applied per instance, including the
                        first ``K_infer``, shape (batch,), int32.

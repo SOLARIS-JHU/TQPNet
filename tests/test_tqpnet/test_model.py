@@ -139,6 +139,14 @@ def test_negative_solve_depths_are_rejected(field, value):
         model.solve(jnp.zeros((1, 2)))
 
 
+def test_numpy_integer_depths_are_accepted():
+    model, *_ = _model()
+    model.Params.Train.epochs, model.Params.Train.K_train = 2, np.int64(3)
+    model.train()
+    model.Params.Solve.K_infer, model.Params.Solve.K_max = np.int64(2), np.int32(0)
+    assert bool(jnp.all(model.solve(jnp.zeros((1, 2))).steps == 2))
+
+
 def test_negative_k_train_is_rejected():
     model, *_ = _model()
     model.Params.Train.K_train = -1

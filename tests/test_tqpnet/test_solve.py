@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 
-from tqpnet.admm import build_operator, residual
+from tqpnet.admm import admm_relu, build_operator, residual
 from tqpnet.network import build_network
 from tqpnet.solve import SolveResult, solve
 
@@ -43,6 +43,23 @@ def test_refinement_reaches_tolerance_and_counts_steps():
     assert bool(jnp.all(r.max_violation < 1e-3))
     # untrained net: at least one instance must have needed extra steps
     assert int(jnp.max(r.steps)) > 5
+
+
+def test_refined_instances_freeze_at_first_certified_layer():
+    op, net, var, P, q_fn, c_fn = _setup()
+    tol = 1e-8
+    r = solve(net, var, op, P, q_fn, c_fn, K_infer=5, tol_on=tol, K_max=5000)
+    x0, beta0 = net.apply(var, P)
+    beta0 = jnp.maximum(beta0, 0.0)
+    for i in range(P.shape[0]):
+        k = int(r.steps[i])
+        q, c = q_fn(P[i]), c_fn(P[i])
+        xk, bk = admm_relu(op, x0[i], beta0[i], q, c, k)
+        assert jnp.allclose(r.x[i], xk, atol=1e-12) and jnp.allclose(r.beta[i], bk, atol=1e-12)
+        assert float(residual(op, xk, bk, q, c)) <= tol
+        if k > 5:   # the layer before was not yet certified
+            xp, bp = admm_relu(op, x0[i], beta0[i], q, c, k - 1)
+            assert float(residual(op, xp, bp, q, c)) > tol
 
 
 def test_k_max_caps_steps():
