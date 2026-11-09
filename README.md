@@ -49,7 +49,7 @@ TQPNet learns to **compress a long ADMM trajectory** into a compact neural warm 
 3. **Self-supervised residual loss.** An MLP(ReLU) maps $p \mapsto (x_0, \beta_0)$ and is trained end-to-end through $K_{\text{train}}$ unrolled ADMM(ReLU) layers on the optimality-condition residual. The same residual serves online as a certificate: if it exceeds a tolerance, a few more ADMM(ReLU) steps refine the answer.
 
 <p align="center">
-  <img src="docs/figures/tqpnet_architecture.png" width="95%" alt="TQPNet architecture: offline training and online inference phases">
+  <img src="docs/figures/tqpnet_architecture.svg" width="95%" alt="TQPNet architecture: offline training and online inference phases">
 </p>
 
 ## Results at a Glance
