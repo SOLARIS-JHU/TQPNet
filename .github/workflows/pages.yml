@@ -1,4 +1,5 @@
 name: Website
+# Validate the website before publishing it to GitHub Pages.
 
 on:
   push:
