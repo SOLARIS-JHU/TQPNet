@@ -1,6 +1,7 @@
 <h1 align="center">TQPNet</h1>
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2610.38079"><img src="https://img.shields.io/badge/arXiv-2610.38079-b31b1b.svg?logo=arxiv&logoColor=white" alt="arXiv:2610.38079"></a>
   <a href="https://neurips.cc/virtual/2026/poster/149158"><img src="https://img.shields.io/badge/NeurIPS-2026-5C2D91.svg" alt="NeurIPS 2026 paper page"></a>
   <a href="https://solaris-jhu.github.io/TQPNet/"><img src="https://img.shields.io/badge/Project%20page-solaris--jhu.github.io-002D72.svg?logo=githubpages&logoColor=white" alt="Project page"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+"></a>
